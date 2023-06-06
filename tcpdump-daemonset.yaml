@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: collect-tcpdump-ocp
+spec:
+  selector:
+    matchLabels:
+      collect-tcpdump-ocp: ""
+  template:
+    metadata:
+      labels:
+        collect-tcpdump-ocp: ""
+    spec:
+      containers:
+      - command:
+        - /bin/bash
+        - -c
+        - |
+          mkdir /tmp/tcpdump/
+          tcpdump -nn -s 0 -i any -w /tmp/tcpdump/${HOSTNAME}_$(date +%d_%m_%Y-%H_%M_%S-%Z).pcap &
+          sleep 60
+          pkill tcpdump
+          sleep 10m
+        image: docker.io/ayushgarglinux/collect-tcpdump-ocp
+        name: collect-tcpdump-ocp
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /tmp/
+          name: tcpdump-dir        
+      hostNetwork: true
+      nodeSelector:
+        kubernetes.io/os: linux
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        operator: Exists
+      volumes:
+      - hostPath:
+          path: /tmp/
+          type: ""
+        name: tcpdump-dir
